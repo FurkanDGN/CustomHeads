@@ -85,8 +85,22 @@ public class CustomHeads {
                 .description(Text.of("Creates a custom head and gives it to the specified player."))
                 .arguments(
                         GenericArguments.flags()
-                                .valueFlag(GenericArguments.integer(Text.of(ARG_QUANTITY)), "-quantity", "q")
-                                .valueFlag(GenericArguments.player(Text.of(ARG_PLAYER)), "-player", "p")
+                                .valueFlag(
+                                        GenericArguments.requiringPermission(
+                                                GenericArguments.integer(Text.of(ARG_QUANTITY)),
+                                                pluginId + ".commands.give." + ARG_QUANTITY.toLowerCase()
+                                        ),
+                                        "-quantity",
+                                        "q"
+                                )
+                                .valueFlag(
+                                        GenericArguments.requiringPermission(
+                                                GenericArguments.player(Text.of(ARG_PLAYER)),
+                                                pluginId + ".commands.give." + ARG_PLAYER.toLowerCase()
+                                        ),
+                                        "-player",
+                                        "p"
+                                )
                                 .buildWith(GenericArguments.remainingJoinedStrings(Text.of(ARG_PATH)))
                 )
                 .executor(this::executeGive)
