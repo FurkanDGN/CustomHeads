@@ -2,7 +2,6 @@ package cz.creeper.customheads;
 
 import com.google.common.collect.Maps;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
-import lombok.Getter;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
@@ -23,7 +22,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-@Getter
+/**
+ * Manages texture downloading and caching
+ */
 public class PathResolver {
     public static final String DIRECTORY_NAME_CACHE = "cache";
     private final CustomHeads plugin;
@@ -35,6 +36,10 @@ public class PathResolver {
         asyncExecutor = Sponge.getScheduler().createAsyncExecutor(plugin);
     }
 
+    /**
+     * @param path The path to resolve
+     * @return An existing future that is being executed, or a new one
+     */
     public CompletableFuture<Path> resolvePath(String path) {
         CompletableFuture<Path> result = pathMap.get(path);
 
@@ -48,6 +53,15 @@ public class PathResolver {
         return result;
     }
 
+    /**
+     * If a URL is provided, checks whether a texture of the exact same URL has been downloaded already and returns it;
+     * if not, downloads it and returns the path to the downloaded file.
+     *
+     * If a file path is provided, returns the path to the file, if it's an actual regular file.
+     *
+     * @param rawPath The path to resolve
+     * @return A future promising a Path to a local file
+     */
     private CompletableFuture<Path> computePath(String rawPath) {
         final URL url;
 
@@ -102,12 +116,17 @@ public class PathResolver {
 
                 return outputPath;
             } catch (IOException e) {
-                e.printStackTrace();
                 throw new TextException(Text.of(TextColors.RED, "Could not download the skin from the specified URL."), e);
             }
         }, asyncExecutor);
     }
 
+    /**
+     * Calculates the MD5 hash of a specified {@link String}.
+     *
+     * @param data The {@link String} to process
+     * @return The MD5 hash of the provided {@link String}
+     */
     private static String calculateMd5(String data) {
         try {
             byte[] bytesOfMessage = data.getBytes("UTF-8");

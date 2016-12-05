@@ -56,7 +56,7 @@ import java.util.concurrent.CompletionException;
         }
 )
 public class CustomHeads {
-    public static final String ARG_PATH = "Path";
+    public static final String ARG_PATH = "File/URL";
     public static final String ARG_QUANTITY = "Quantity";
     public static final String ARG_PLAYER = "Player";
     @Inject
@@ -66,12 +66,16 @@ public class CustomHeads {
     private Path configDir;
     private PathResolver pathResolver;
 
-    /**
-     * Registers the commands
-     */
     @Listener
     public void onGameInitialization(GameInitializationEvent event) {
         pathResolver = new PathResolver(this);
+        registerCommands();
+    }
+
+    /**
+     * Registers all of the fancy commands
+     */
+    public void registerCommands() {
         PluginContainer pluginContainer = getPluginContainer();
         String pluginId = pluginContainer.getId();
         CommandManager manager = Sponge.getCommandManager();
@@ -108,7 +112,9 @@ public class CustomHeads {
     }
 
     /**
-     * The command executor for the `/customhead` command.
+     * The command executor for the `/customhead give` command.
+     *
+     * Creates and gives the player a player head with the specified texture.
      */
     public CommandResult executeGive(CommandSource src, CommandContext args) throws CommandException {
         String path = args.<String>getOne(ARG_PATH)
@@ -129,14 +135,18 @@ public class CustomHeads {
             throw new CommandException(Text.of("Please, specify the target player using the `--player` flag."));
         }
 
+        // Downloads the texture and supplies a Path
         pathResolver.resolvePath(path).whenComplete((resolvedPath, e) -> {
+            // Stop, if an error occured while downloading the texture
             if(checkError(e, player, path))
                 return;
 
+            // Sign the texture by Mojang using the MineskinService
             MineskinService mineskinService = getMineskinService();
             CompletableFuture<SkinRecord> skinRecordFuture = mineskinService.getSkin(resolvedPath);
 
             skinRecordFuture.thenAccept(skinRecord -> {
+                // Create and give a custom player head with the specified texture to the player
                 give(src, player, skinRecord.create(quantity));
                 src.sendMessage(
                         Text.of(
@@ -153,7 +163,9 @@ public class CustomHeads {
     }
 
     /**
-     * The command executor for the `/customhead` command.
+     * The command executor for the `/customhead set` command.
+     *
+     * Changes the skin of the held player head.
      */
     public CommandResult executeSet(CommandSource src, CommandContext args) throws CommandException {
         String path = args.<String>getOne(ARG_PATH)
@@ -164,19 +176,24 @@ public class CustomHeads {
 
         Player player = (Player) src;
 
+        // Do not proceed if the player isn't holding a player head in their main hand
         if(!checkHand(player).isPresent())
             return CommandResult.empty();
 
         player.sendMessage(Text.of(TextColors.GRAY, "Changing the skin, please wait..."));
 
+        // Downloads the texture and supplies a Path
         pathResolver.resolvePath(path).whenComplete((resolvedPath, e) -> {
+            // Stop, if an error occured while downloading the texture
             if(checkError(e, player, path))
                 return;
 
+            // Sign the texture by Mojang using the MineskinService
             MineskinService mineskinService = getMineskinService();
             CompletableFuture<SkinRecord> skinRecordFuture = mineskinService.getSkin(resolvedPath);
 
             skinRecordFuture.thenAccept(skinRecord -> {
+                // Do not proceed if the player isn't holding a player head in their main hand
                 Optional<ItemStack> itemStackOptional = checkHand(player);
 
                 if(!itemStackOptional.isPresent())
@@ -184,6 +201,7 @@ public class CustomHeads {
 
                 ItemStack itemStack = itemStackOptional.get();
 
+                // Change the skin of the held player head
                 skinRecord.apply(itemStack);
 
                 player.setItemInHand(HandTypes.MAIN_HAND, itemStack);
@@ -196,6 +214,14 @@ public class CustomHeads {
         return CommandResult.empty();
     }
 
+    /**
+     * Announces that an error has occurred while resolving a path.
+     *
+     * @param e The error
+     * @param player Who to send the message to
+     * @param path The requested path
+     * @return Whether an error occurred and further execution should be terminated
+     */
     private boolean checkError(Throwable e, MessageReceiver player, String path) {
         if(e != null) {
             TextException textException = (TextException) (e instanceof TextException ? e : (
@@ -217,6 +243,12 @@ public class CustomHeads {
         return false;
     }
 
+    /**
+     * Checks, whether the player is holding a player head.
+     *
+     * @param player The player
+     * @return The player head, if found and applicable
+     */
     private Optional<ItemStack> checkHand(Player player) {
         Optional<ItemStack> itemStackOptional = player.getItemInHand(HandTypes.MAIN_HAND);
 
