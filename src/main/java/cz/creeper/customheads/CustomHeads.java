@@ -198,7 +198,7 @@ public class CustomHeads {
 
         // Downloads the texture and supplies a Path
         pathResolver.resolvePath(path).whenComplete((resolvedPath, e) -> {
-            // Stop, if an error occured while downloading the texture
+            // Stop, if an error occurred while downloading the texture
             if(checkError(e, player, path))
                 return;
 
